@@ -30,13 +30,20 @@ def file_hash(file_path):
 def move_file(source, destination, moved_count):
     print("{} From: {} To: {}".format(moved_count, file_path, new_location))
 
+    if not destination.parent.exists():
+        destination.parent.mkdir(parents=True)
+
+    source.rename(destination)
+
 
 def delete_file(file_path):
     print("Deleting file: {}".format(file_path))
+    os.unlink(str(file_path))
 
 
 if __name__ == "__main__":
     source = Path(r"E:\Jewell Family Media\Photos")
+    #source = Path(r"E:\Jewell Family Media\Photos\Phone Pics")
     destination = Path(r"E:\Jewell Family Media")
     duplicates_folder = Path(r"E:\photo_duplicates")
     start_time = time.time()
@@ -47,23 +54,26 @@ if __name__ == "__main__":
     deleted_count = 0
     unhandled_count = 0
     video_count = 0
+    image_extensions = ['.bmp', '.png', '.jpg', '.JPG', '.PNG', '.GIF', '.jpeg']
+    video_extensions = ['.wmv', '.MOV', '.AVI', '.AAE', '.mov', '.mp4']
+    ignore_extensions = ['.idx2', '.psd']
+    delete_extensions = ['.ini', '.ithmb', '.db']
 
     for root, dirs, files in os.walk(str(source), topdown=True):
         root_path = Path(root)
         for name in files:
             total_files += 1
             file_path = root_path / name
-            file_extensions.add(file_path.suffix)
-
             file_suffix = file_path.suffix
+            file_extensions.add(file_suffix)
 
-            if file_suffix in [".ini"]:
+            if file_suffix in delete_extensions:
                 deleted_count += 1
                 delete_file(file_path)
-            elif file_suffix in [".mpg", ".mpeg", ".avi", ".qt", ".mp4", ".m4v", ".wmv"]:
+            elif file_suffix in video_extensions:
                 print("Skipping video file: {}".format(file_path))
                 video_count += 1
-            else:
+            elif file_suffix in image_extensions:
                 date_taken = get_date_taken(file_path)
                 if date_taken:
                     date_parts = date_taken.values.split(':')
@@ -86,6 +96,8 @@ if __name__ == "__main__":
                 else:
                     print("Cannot process file: {}".format(file_path))
                     unhandled_count += 1
+            else:
+                print("Uknown file type: {}".format(file_path))
 
     print("Moved: {} files in {} minutes".format(moved_file_count, (time.time() - start_time)/60))
     print("Duplicate files {}".format(duplicate_count))
