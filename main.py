@@ -1,33 +1,49 @@
+import argparse
+import json
 import os
+import sys
 from pathlib import Path
 
 import time
 
+from media_sorter import MediaSorter
+
+
+def get_options(args=None):
+    if args is None:
+        args = sys.argv[1:]
+    parser = argparse.ArgumentParser(description="Parses command.")
+    parser.add_argument("-s", "--source_path", help="Directory containing media", required=True)
+    parser.add_argument("-d", "--destination_path", help="Directory to write media", required=True)
+    parser.add_argument("-t", "--test_mode", help="Report preview of action, do not move files", action="store_true")
+    options = parser.parse_args(args)
+    return options
+
+
+def main():
+    command_params = get_options()
+    print(command_params)
+    source_path = Path(command_params.source_path)
+    if not source_path.exists():
+        print(f"Could not find directory {source_path}")
+        exit(-1)
+
+    destination_path = Path(command_params.destination_path)
+
+    media_sorter = MediaSorter(source_path, destination_path, command_params.test_mode)
+    print("Start walking folder structure")
+    start_time = time.time()
+    media_sorter.walk()
+    walk_time = time.time() - start_time
+
+    start_time = time.time()
+    media_sorter.move_all()
+    move_time = time.time() - start_time
+    report = media_sorter.report()
+    print(json.dumps(report, indent=2))
+    print(f"walk_time={walk_time} move_time={move_time}")
+
+
 if __name__ == "__main__":
-    print("hello")
+    main()
 
-    source = Path(r"E:\GooglePhotoExtraction\Takeout\Google Photos")
-    destination = Path(r"E:\destination")
-
-    for root, dirs, files in os.walk(str(source), topdown=True):
-        for name in files:
-            file_path = Path(os.path.join(root, name))
-            parent_name = file_path.parent.name
-            parent_split = parent_name.split("-")
-            if len(parent_split) == 3:
-                new_parent_name = "{}-{}".format(parent_split[0], parent_split[1])
-            else:
-                new_parent_name = None
-
-            if "json" not in str(file_path) and new_parent_name:
-                file_destination = destination / new_parent_name / file_path.name
-                print("path={} - parent_name = {}".format(file_path, parent_name))
-                print("destination={}".format(file_destination))
-                if not file_destination.parent.exists():
-                    file_destination.parent.mkdir()
-
-                if file_destination.exists():
-                    new_name = "{}_{}".format(time.time(), file_destination.name)
-                    file_destination = file_destination.parent / new_name
-
-                file_path.rename(file_destination)
